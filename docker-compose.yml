@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+
+  backend:
+    build: ./backend
+    container_name: backend-service
+    env_file:
+      - .env
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - micro-net
+
+  frontend:
+    build: ./frontend
+    container_name: frontend-service
+    ports:
+      - "80:80"
+    restart: always
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: "0.30"
+          memory: 256M
+    networks:
+      - micro-net
+
+  db:
+    image: postgres:14
+    container_name: database-service
+    env_file:
+      - database/.env
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - micro-net
+
+volumes:
+  db-data:
+
+networks:
+  micro-net:
